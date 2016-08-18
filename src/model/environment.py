@@ -161,7 +161,7 @@ class EnvironmentModel(Model):
                     SELECT `environment_discovery`, `environment_data`, `api_version`
                     FROM `applications`, `application_versions`, `environments`
                     WHERE `application_versions`.`application_id`=`applications`.`application_id`
-                        AND `applications`.`application_id`=%s AND `version_name`=%s
+                        AND `applications`.`application_name`=%s AND `version_name`=%s
                         AND `environment_id`=`version_environment`;
                 """, app_name, app_version)
         except DatabaseError as e:
