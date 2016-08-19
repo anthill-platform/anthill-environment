@@ -5,6 +5,8 @@ import ujson
 from tornado.gen import coroutine, Return
 from tornado.web import RequestHandler, HTTPError
 
+from common.handler import JsonHandler
+
 from model.environment import EnvironmentNotFound
 from model.application import ApplicationNotFound
 
@@ -52,7 +54,7 @@ class InternalHandler(object):
         ])
 
 
-class DiscoverHandler(RequestHandler):
+class DiscoverHandler(JsonHandler):
     @coroutine
     def get(self, app_name, app_version):
         environment = self.application.environment
@@ -72,4 +74,4 @@ class DiscoverHandler(RequestHandler):
 
         res.update(version.data)
 
-        self.write(ujson.dumps(res))
+        self.dumps(res)
