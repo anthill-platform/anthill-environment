@@ -67,10 +67,7 @@ class ApplicationController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_admin"]
 
     @coroutine
@@ -179,10 +176,7 @@ class ApplicationVersionController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_admin"]
 
     @coroutine
@@ -227,10 +221,7 @@ class ApplicationsController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_admin"]
 
 
@@ -286,10 +277,7 @@ class EnvironmentController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_envs_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_envs_admin"]
 
     @coroutine
@@ -341,10 +329,7 @@ class EnvironmentVariablesController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_envs_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_envs_admin"]
 
     @coroutine
@@ -390,10 +375,7 @@ class EnvironmentsController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_envs_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_envs_admin"]
 
 
@@ -443,10 +425,7 @@ class NewApplicationController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_admin"]
 
 
@@ -533,10 +512,7 @@ class NewApplicationVersionController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_admin"]
 
 
@@ -572,10 +548,7 @@ class NewEnvironmentController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_envs_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_envs_admin"]
 
 
@@ -588,8 +561,5 @@ class RootAdminController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["env_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["env_admin"]
