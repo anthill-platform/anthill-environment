@@ -4,7 +4,7 @@ from common.options import define
 # Main
 
 define("host",
-       default="http://environment-dev.anthill.local",
+       default="http://environment-dev.anthill",
        help="Public hostname of this service",
        type=str)
 
