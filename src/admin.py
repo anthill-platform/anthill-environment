@@ -62,7 +62,7 @@ class ApplicationController(a.AdminController):
                        version_id=v.version_id) for v in data["versions"]
                 ]),
             a.links("Navigate", [
-                a.link("apps", "Go back"),
+                a.link("apps", "Go back", icon="chevron-left"),
                 a.link("new_app_version", "New application version", "plus", app_id=data.get("application_name"))
             ])
         ]
@@ -171,7 +171,7 @@ class ApplicationVersionController(a.AdminController):
                 "delete": a.method("Delete", "danger", order=2)
             }, data=data),
             a.links("Navigate", [
-                a.link("app", "Go back", record_id=data.get("record_id")),
+                a.link("app", "Go back", icon="chevron-left", record_id=data.get("record_id")),
                 a.link("new_app_version", "New application version", "plus", app_id=self.context.get("app_id"))
             ])
         ]
@@ -216,7 +216,7 @@ class ApplicationsController(a.AdminController):
                 a.link("app", app.title, icon="mobile", record_id=app.application_id) for app in data["apps"]
             ]),
             a.links("Navigate", [
-                a.link("index", "Go back"),
+                a.link("index", "Go back", icon="chevron-left"),
                 a.link("new_app", "New application", "plus")
             ])
         ]
@@ -272,7 +272,7 @@ class EnvironmentController(a.AdminController):
                 "delete": a.method("Delete", "danger")
             }, data=data),
             a.links("Navigate", [
-                a.link("envs", "Go back"),
+                a.link("envs", "Go back", icon="chevron-left"),
                 a.link("new_env", "New environment", "plus")
             ])
         ]
@@ -324,7 +324,7 @@ class EnvironmentVariablesController(a.AdminController):
                 "update": a.method("Update", "primary")
             }, data=data),
             a.links("Navigate", [
-                a.link("envs", "Go back"),
+                a.link("envs", "Go back", icon="chevron-left"),
                 a.link("https://spacetelescope.github.io/understanding-json-schema/index.html", "See docs", icon="book")
             ])
         ]
@@ -369,7 +369,7 @@ class EnvironmentsController(a.AdminController):
                 a.link("environment", env.name, icon="random", record_id=env.environment_id) for env in data["envs"]
                 ]),
             a.links("Navigate", [
-                a.link("index", "Go back"),
+                a.link("index", "Go back", icon="chevron-left"),
                 a.link("vars", "Environment variables", "cog"),
                 a.link("new_env", "New environment", "plus")
             ])
@@ -421,7 +421,7 @@ class NewApplicationController(a.AdminController):
                 "create": a.method("Create", "primary")
             }, data=data),
             a.links("Navigate", [
-                a.link("apps", "Go back")
+                a.link("apps", "Go back", icon="chevron-left")
             ])
         ]
 
@@ -508,7 +508,7 @@ class NewApplicationVersionController(a.AdminController):
                 "create": a.method("Create", "primary")
             }, data=data),
             a.links("Navigate", [
-                a.link("app", "Go back", record_id=data.get("record_id"))
+                a.link("app", "Go back", icon="chevron-left", record_id=data.get("record_id"))
             ])
         ]
 
@@ -544,7 +544,7 @@ class NewEnvironmentController(a.AdminController):
                 "create": a.method("Create", "primary")
             }, data=data),
             a.links("Navigate", [
-                a.link("apps", "Go back")
+                a.link("apps", "Go back", icon="chevron-left")
             ])
         ]
 
