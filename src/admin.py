@@ -281,7 +281,7 @@ class EnvironmentController(a.AdminController):
         return ["env_envs_admin"]
 
     @coroutine
-    def update(self, env_name, env_discovery, env_data):
+    def update(self, env_name, env_discovery, env_data, **ignored):
         record_id = self.context.get("record_id")
 
         try:
