@@ -229,7 +229,8 @@ class ApplicationsModel(Model):
                 """
                     SELECT *
                     FROM `application_versions`
-                    WHERE `application_id`=%s AND `gamespace_id`=%s;
+                    WHERE `application_id`=%s AND `gamespace_id`=%s
+                    ORDER BY `version_name` ASC;
                 """, application_id, gamespace_id)
         except DatabaseError as e:
             raise ApplicationError("Failed to list application versions: " + e.args[1])
@@ -244,7 +245,8 @@ class ApplicationsModel(Model):
                 """
                     SELECT `application_id`, `application_name`, `application_title`
                     FROM `applications`
-                    WHERE `gamespace_id`=%s;
+                    WHERE `gamespace_id`=%s
+                    ORDER BY `application_name` ASC;
                 """, gamespace_id)
 
         except DatabaseError as e:
