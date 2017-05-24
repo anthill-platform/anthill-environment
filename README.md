@@ -24,10 +24,10 @@ That's where the service kicks in: the actual environment is based on the versio
 <br><br>
 <div align="center"><img src="https://cloud.githubusercontent.com/assets/1666014/22352370/8214fb22-e424-11e6-80d6-f1ba3c863dc9.png" height="241"/>
 <br>
-Environments or Game Versions could be configured at <a href="https://github.com/anthill-services/anthill-admin">Admin Service</a>.
+Environments or Game Versions could be configured at <a href="https://github.com/anthill-platform/anthill-admin">Admin Service</a>.
 </div>
 <br><br>
-At the end of the day, the Environment Service points client application to the right <a href="https://github.com/anthill-services/anthill-discovery">Discovery Service</a> location (based on the environment).
+At the end of the day, the Environment Service points client application to the right <a href="https://github.com/anthill-platform/anthill-discovery">Discovery Service</a> location (based on the environment).
 
 ## API Versions
 Games tend to be outdated once in a while, yet the online services may progress constantly.
