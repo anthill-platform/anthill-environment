@@ -38,7 +38,7 @@ class EnvironmentModel(Model):
 
     @coroutine
     def setup_table_environments(self):
-        yield self.create_environment("dev", "http://discovery-dev.anthill.local")
+        yield self.create_environment("dev", "http://localhost:9502")
 
     @coroutine
     def setup_table_scheme(self):
@@ -74,7 +74,7 @@ class EnvironmentModel(Model):
                 yield db.execute(
                     """
                         DELETE FROM `application_versions`
-                        WHERE `version_environment`=%s;
+                        WHERE `application_versions`.`version_environment`=%s;
                     """, environment_id)
 
                 yield db.execute(
@@ -158,11 +158,11 @@ class EnvironmentModel(Model):
         try:
             version = yield self.db.get(
                 """
-                    SELECT `environment_discovery`, `environment_data`, `api_version`
+                    SELECT `environment_discovery`, `environment_data`, `application_versions`.`api_version`
                     FROM `applications`, `application_versions`, `environments`
                     WHERE `application_versions`.`application_id`=`applications`.`application_id`
-                        AND `applications`.`application_name`=%s AND `version_name`=%s
-                        AND `environment_id`=`version_environment`;
+                        AND `applications`.`application_name`=%s AND `application_versions`.`version_name`=%s
+                        AND `environment_id`=`application_versions`.`version_environment`;
                 """, app_name, app_version)
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to get version environment: " + e.args[1])
