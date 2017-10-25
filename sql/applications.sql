@@ -1,6 +1,5 @@
 CREATE TABLE `applications` (
   `application_id` int(11) NOT NULL AUTO_INCREMENT,
-  `gamespace_id` int(10) unsigned NOT NULL,
   `application_name` varchar(45) NOT NULL,
   `application_title` varchar(128) NOT NULL,
   `min_api` varchar(8) NOT NULL DEFAULT '0.1',

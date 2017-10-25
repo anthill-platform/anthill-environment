@@ -1,6 +1,5 @@
 CREATE TABLE `application_versions` (
   `version_id` int(11) NOT NULL AUTO_INCREMENT,
-  `gamespace_id` int(11) NOT NULL,
   `application_id` int(11) NOT NULL,
   `version_name` varchar(45) NOT NULL,
   `version_environment` int(11) NOT NULL,

@@ -14,7 +14,7 @@ class ApplicationController(a.AdminController):
 
         applications = self.application.applications
 
-        yield applications.delete_application(self.gamespace, record_id)
+        yield applications.delete_application(record_id)
 
         raise a.Redirect("apps", message="Application has been deleted")
 
@@ -28,7 +28,7 @@ class ApplicationController(a.AdminController):
         except ApplicationNotFound:
             raise a.ActionError("Application was not found.")
 
-        versions = yield applications.list_application_versions(self.gamespace, record_id)
+        versions = yield applications.list_application_versions(record_id)
 
         api = self.application.api
         api_versions = yield api.get_versions()
@@ -78,7 +78,6 @@ class ApplicationController(a.AdminController):
 
         try:
             yield applications.update_application(
-                self.gamespace,
                 record_id,
                 application_name,
                 application_title,
@@ -102,10 +101,10 @@ class ApplicationVersionController(a.AdminController):
         record_id = self.context.get("version_id")
         app_id = self.context.get("app_id")
 
-        yield applications.delete_application_version(self.gamespace, record_id)
+        yield applications.delete_application_version(record_id)
 
         try:
-            app = yield applications.find_application(self.gamespace, app_id)
+            app = yield applications.find_application(app_id)
         except ApplicationNotFound:
             raise a.ActionError("App was not found.")
 
@@ -124,14 +123,14 @@ class ApplicationVersionController(a.AdminController):
         api = self.application.api
 
         try:
-            app = yield applications.find_application(self.gamespace, app_id)
+            app = yield applications.find_application(app_id)
         except ApplicationNotFound:
             raise a.ActionError("App was not found.")
 
         application_id = app.application_id
 
         try:
-            version = yield applications.get_application_version(self.gamespace, application_id, version_id)
+            version = yield applications.get_application_version(application_id, version_id)
         except ApplicationNotFound:
             raise a.ActionError("Application was not found.")
         except VersionNotFound:
@@ -201,7 +200,7 @@ class ApplicationsController(a.AdminController):
     @coroutine
     def get(self):
         applications = self.application.applications
-        apps = yield applications.list_applications(self.gamespace)
+        apps = yield applications.list_applications()
 
         result = {
             "apps": apps
@@ -386,7 +385,7 @@ class NewApplicationController(a.AdminController):
         applications = self.application.applications
 
         try:
-            record_id = yield applications.create_application(self.gamespace, app_name, app_title, min_api)
+            record_id = yield applications.create_application(app_name, app_title, min_api)
         except ApplicationExists:
             raise a.ActionError("Application with id " + app_name + " already exists.")
 
@@ -438,7 +437,7 @@ class NewApplicationVersionController(a.AdminController):
         app_id = self.context.get("app_id")
 
         try:
-            app = yield applications.find_application(self.gamespace, app_id)
+            app = yield applications.find_application(app_id)
         except ApplicationNotFound:
             raise a.ActionError("App " + str(app_id) + " was not found.")
 
@@ -446,7 +445,6 @@ class NewApplicationVersionController(a.AdminController):
 
         try:
             record_id = yield applications.create_application_version(
-                self.gamespace,
                 application_id,
                 version_name,
                 version_env,
@@ -472,7 +470,7 @@ class NewApplicationVersionController(a.AdminController):
         api = self.application.api
 
         try:
-            app = yield applications.find_application(self.gamespace, app_id)
+            app = yield applications.find_application(app_id)
         except ApplicationNotFound:
             raise a.ActionError("App " + str(app_id) + " was not found.")
 

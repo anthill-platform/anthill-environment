@@ -50,24 +50,24 @@ class ApplicationsModel(Model):
 
     @coroutine
     def setup_table_applications(self):
-        yield self.create_application(1, "test", "Test application", "0.1")
+        yield self.create_application("test", "Test application", "0.1")
 
     @coroutine
     def setup_table_application_versions(self):
 
         dev_env = yield self.environment.find_environment("dev")
-        test_app = yield self.find_application(1, "test")
+        test_app = yield self.find_application("test")
 
-        yield self.create_application_version(1, test_app.application_id, "1.0", dev_env.environment_id, "0.1")
+        yield self.create_application_version(test_app.application_id, "1.0", dev_env.environment_id, "0.1")
 
     def get_setup_tables(self):
         return ["applications", "application_versions"]
 
     @coroutine
-    def create_application(self, gamespace_id, application_name, application_title, min_api):
+    def create_application(self, application_name, application_title, min_api):
 
         try:
-            yield self.find_application(gamespace_id, application_name)
+            yield self.find_application(application_name)
         except ApplicationNotFound:
             pass
         else:
@@ -77,9 +77,9 @@ class ApplicationsModel(Model):
             record_id = yield self.db.insert(
                 """
                     INSERT INTO `applications`
-                    (`gamespace_id`, `application_name`, `application_title`, `min_api`)
-                    VALUES (%s, %s, %s, %s);
-                """, gamespace_id, application_name, application_title, min_api
+                    (`application_name`, `application_title`, `min_api`)
+                    VALUES (%s, %s, %s);
+                """, application_name, application_title, min_api
             )
         except DuplicateError:
             raise ApplicationExists()
@@ -89,13 +89,13 @@ class ApplicationsModel(Model):
         raise Return(record_id)
 
     @coroutine
-    def create_application_version(self, gamespace_id, application_id, version_name, version_environment, api_version):
+    def create_application_version(self, application_id, version_name, version_environment, api_version):
 
         if version_name == DEFAULT:
             raise
 
         try:
-            yield self.find_application_version(gamespace_id, application_id, version_name)
+            yield self.find_application_version(application_id, version_name)
         except VersionNotFound:
             pass
         else:
@@ -105,10 +105,10 @@ class ApplicationsModel(Model):
             version_id = yield self.db.insert(
                 """
                     INSERT INTO `application_versions`
-                    (`gamespace_id`, `application_id`, `version_name`, version_environment, `api_version`)
-                    VALUES (%s, %s, %s, %s, %s);
+                    (`application_id`, `version_name`, version_environment, `api_version`)
+                    VALUES (%s, %s, %s, %s);
                 """,
-                gamespace_id, application_id, version_name, version_environment, api_version)
+                application_id, version_name, version_environment, api_version)
 
         except DatabaseError as e:
             raise ApplicationError("Failed to create application version: " + e.args[1])
@@ -116,47 +116,46 @@ class ApplicationsModel(Model):
         raise Return(version_id)
 
     @coroutine
-    def delete_application(self, gamespace_id, application_id):
+    def delete_application(self, application_id):
 
         try:
             with (yield self.db.acquire()) as db:
                 yield db.execute(
                     """
                         DELETE FROM `application_versions`
-                        WHERE `application_id`=%s AND `gamespace_id`=%s;
-                    """, application_id, gamespace_id)
+                        WHERE `application_id`=%s;
+                    """, application_id)
 
                 yield db.execute(
                     """
                         DELETE FROM `applications`
-                        WHERE `application_id`=%s AND `gamespace_id`=%s;
-                    """, application_id, gamespace_id)
+                        WHERE `application_id`=%s;
+                    """, application_id)
 
         except DatabaseError as e:
             raise ApplicationError("Failed to delete application: " + e.args[1])
 
     @coroutine
-    def delete_application_version(self, gamespace_id, version_id):
+    def delete_application_version(self, version_id):
         try:
             yield self.db.execute(
                 """
                     DELETE FROM `application_versions`
-                    WHERE `version_id`=%s AND `gamespace_id`=%s;
-                """, version_id, gamespace_id
-            )
+                    WHERE `version_id`=%s;
+                """, version_id)
         except DatabaseError as e:
             raise ApplicationError("Failed to delete application version: " + e.args[1])
 
     @coroutine
-    def find_application(self, gamespace_id, application_name):
+    def find_application(self, application_name):
 
         try:
             app = yield self.db.get(
                 """
                     SELECT *
                     FROM `applications`
-                    WHERE `application_name`=%s AND `gamespace_id`=%s;
-                """, application_name, gamespace_id)
+                    WHERE `application_name`=%s;
+                """, application_name)
         except DatabaseError as e:
             raise ApplicationError("Failed to find application: " + e.args[1])
 
@@ -166,15 +165,15 @@ class ApplicationsModel(Model):
         raise Return(ApplicationAdapter(app))
 
     @coroutine
-    def find_application_version(self, gamespace_id, application_id, version_name):
+    def find_application_version(self, application_id, version_name):
 
         try:
             version = yield self.db.get(
                 """
                     SELECT *
                     FROM `application_versions`
-                    WHERE `gamespace_id`=%s AND `application_id`=%s AND `version_name`=%s;
-                """, gamespace_id, application_id, version_name
+                    WHERE `application_id`=%s AND `version_name`=%s;
+                """, application_id, version_name
             )
         except DatabaseError as e:
             raise ApplicationError("Failed to find application version: " + e.args[1])
@@ -203,15 +202,15 @@ class ApplicationsModel(Model):
         raise Return(ApplicationAdapter(application))
 
     @coroutine
-    def get_application_version(self, gamespace_id, application_id, version_id):
+    def get_application_version(self, application_id, version_id):
 
         try:
             version = yield self.db.get(
                 """
                     SELECT *
                     FROM `application_versions`
-                    WHERE `application_id`=%s AND `version_id`=%s AND `gamespace_id`=%s;
-                """, application_id, version_id, gamespace_id)
+                    WHERE `application_id`=%s AND `version_id`=%s;
+                """, application_id, version_id)
 
         except DatabaseError as e:
             raise ApplicationError("Failed to get application version: " + e.args[1])
@@ -222,32 +221,31 @@ class ApplicationsModel(Model):
         raise Return(ApplicationVersionAdapter(version))
 
     @coroutine
-    def list_application_versions(self, gamespace_id, application_id):
+    def list_application_versions(self, application_id):
 
         try:
             versions = yield self.db.query(
                 """
                     SELECT *
                     FROM `application_versions`
-                    WHERE `application_id`=%s AND `gamespace_id`=%s
+                    WHERE `application_id`=%s
                     ORDER BY `version_name` ASC;
-                """, application_id, gamespace_id)
+                """, application_id)
         except DatabaseError as e:
             raise ApplicationError("Failed to list application versions: " + e.args[1])
 
         raise Return(map(ApplicationVersionAdapter, versions))
 
     @coroutine
-    def list_applications(self, gamespace_id):
+    def list_applications(self):
 
         try:
             apps = yield self.db.query(
                 """
                     SELECT `application_id`, `application_name`, `application_title`
                     FROM `applications`
-                    WHERE `gamespace_id`=%s
                     ORDER BY `application_name` ASC;
-                """, gamespace_id)
+                """)
 
         except DatabaseError as e:
             raise ApplicationError("Failed to list applications: " + e.args[1])
@@ -255,15 +253,14 @@ class ApplicationsModel(Model):
         raise Return(map(ApplicationAdapter, apps))
 
     @coroutine
-    def update_application(self, gamespace_id, application_id, application_name, application_title, min_api):
+    def update_application(self, application_id, application_name, application_title, min_api):
         try:
             yield self.db.execute(
                 """
                     UPDATE `applications`
                     SET `application_name`=%s, `application_title`=%s, `min_api`=%s
-                    WHERE `application_id`=%s AND `gamespace_id`=%s;
-                """, application_name, application_title, min_api, application_id, gamespace_id
-            )
+                    WHERE `application_id`=%s;
+                """, application_name, application_title, min_api, application_id)
         except DuplicateError:
             raise ApplicationExists()
         except DatabaseError as e:

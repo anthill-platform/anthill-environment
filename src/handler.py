@@ -16,17 +16,17 @@ class InternalHandler(object):
         self.application = application
 
     @coroutine
-    def get_app_info(self, app_name, gamespace_id):
+    def get_app_info(self, app_name):
         applications = self.application.applications
 
         try:
-            app = yield applications.find_application(gamespace_id, app_name)
+            app = yield applications.find_application(app_name)
         except ApplicationNotFound:
             raise HTTPError(404, "Application {0} was not found".format(app_name))
 
         application_id = app.application_id
 
-        versions = yield applications.list_application_versions(gamespace_id, application_id)
+        versions = yield applications.list_application_versions(application_id)
 
         raise Return({
             "id": app.application_id,
@@ -39,10 +39,10 @@ class InternalHandler(object):
         })
 
     @coroutine
-    def get_apps(self, gamespace_id):
+    def get_apps(self):
 
         applications = self.application.applications
-        apps = yield applications.list_applications(gamespace_id)
+        apps = yield applications.list_applications()
 
         raise Return([
             {
