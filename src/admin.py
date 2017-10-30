@@ -31,7 +31,12 @@ class ApplicationController(a.AdminController):
         versions = yield applications.list_application_versions(record_id)
 
         api = self.application.api
-        api_versions = yield api.get_versions()
+        api_versions_ = yield api.get_versions()
+
+        api_versions = {
+            v: v for v in api_versions_
+        }
+        api_versions[""] = "default"
 
         result = {
             "api_versions": api_versions,
@@ -52,7 +57,7 @@ class ApplicationController(a.AdminController):
                 "application_name": a.field("Application ID", "text", "primary", "non-empty"),
                 "application_title": a.field("Application Title", "text", "primary", "non-empty"),
                 "min_api": a.field("Minimum API version", "select", "primary", "non-empty",
-                                   values={ver: ver for ver in data["api_versions"]}),
+                                   values=data["api_versions"]),
             }, methods={
                 "update": a.method("Update", "primary", order=1),
                 "delete": a.method("Delete", "danger", order=2)
@@ -138,7 +143,12 @@ class ApplicationVersionController(a.AdminController):
 
         min_api = app.min_api
 
-        api_versions = yield api.get_versions(min_api=min_api)
+        api_versions_ = yield api.get_versions(min_api=min_api)
+
+        api_versions = {
+            v: v for v in api_versions_
+        }
+        api_versions[""] = "default"
 
         result = {
             "app_title": app.title,
@@ -164,7 +174,7 @@ class ApplicationVersionController(a.AdminController):
                     env.environment_id: env.name for env in data["envs"]
                 }),
                 "api_version": a.field("API version", "select", "primary", "non-empty",
-                                       values={ver: ver for ver in data["api_versions"]}),
+                                       values=data["api_versions"]),
             }, methods={
                 "update": a.method("Update", "primary", order=1),
                 "delete": a.method("Delete", "danger", order=2)
@@ -477,7 +487,11 @@ class NewApplicationVersionController(a.AdminController):
         application_id = app.application_id
         min_api = app.min_api
 
-        api_versions = yield api.get_versions(min_api=min_api)
+        api_versions_ = yield api.get_versions(min_api=min_api)
+        api_versions = {
+            v: v for v in api_versions_
+        }
+        api_versions[""] = "default"
 
         result = {
             "app_name": app.title,
@@ -501,7 +515,7 @@ class NewApplicationVersionController(a.AdminController):
                     env.environment_id: env.name for env in data["envs"]
                 }),
                 "api_version": a.field("API version", "select", "primary", "non-empty",
-                                       values={ver: ver for ver in data["api_versions"]}),
+                                       values=data["api_versions"]),
             }, methods={
                 "create": a.method("Create", "primary")
             }, data=data),

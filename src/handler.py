@@ -66,7 +66,7 @@ class DiscoverHandler(JsonHandler):
                 404, "Version {0} of the app {1} was not found.".format(
                     app_version, app_name))
 
-        discovery = version.discovery + "/v" + version.api
+        discovery = version.discovery + (("/v" + version.api) if version.api else "")
 
         res = {
             "discovery": discovery
