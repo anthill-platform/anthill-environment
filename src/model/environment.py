@@ -25,7 +25,6 @@ class EnvironmentAdapter(object):
 class EnvironmentPlusVersionAdapter(object):
     def __init__(self, data):
         self.discovery = data.get("environment_discovery")
-        self.api = data.get("api_version")
         self.data = data.get("environment_data")
 
 
@@ -158,7 +157,7 @@ class EnvironmentModel(Model):
         try:
             version = yield self.db.get(
                 """
-                    SELECT `environment_discovery`, `environment_data`, `application_versions`.`api_version`
+                    SELECT `environment_discovery`, `environment_data`
                     FROM `applications`, `application_versions`, `environments`
                     WHERE `application_versions`.`application_id`=`applications`.`application_id`
                         AND `applications`.`application_name`=%s AND `application_versions`.`version_name`=%s
@@ -205,18 +204,19 @@ class EnvironmentModel(Model):
 
     @coroutine
     def update_environment(self, record_id, env_name, env_discovery, env_data):
-
         if not isinstance(env_data, dict):
             raise AttributeError("env_data is not a dict")
 
         try:
-            yield self.db.execute("""
+            updated = yield self.db.execute("""
                 UPDATE `environments`
                 SET `environment_name`=%s, `environment_discovery`=%s, `environment_data`=%s
                 WHERE `environment_id`=%s;
             """, env_name, env_discovery, ujson.dumps(env_data), record_id)
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to update environment: " + e.args[1])
+
+        raise Return(bool(updated))
 
 
 class EnvironmentNotFound(Exception):

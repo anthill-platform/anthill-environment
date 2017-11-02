@@ -39,11 +39,3 @@ define("db_name",
        default="dev_environment",
        type=str,
        help="MySQL database name")
-
-# API
-
-define("api_versions",
-       default=["0.1"],
-       type=str,
-       multiple=True,
-       help="A list of API versions")

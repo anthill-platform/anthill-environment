@@ -3,7 +3,7 @@
 import ujson
 
 from tornado.gen import coroutine, Return
-from tornado.web import RequestHandler, HTTPError
+from tornado.web import HTTPError
 
 from common.handler import JsonHandler
 
@@ -66,10 +66,8 @@ class DiscoverHandler(JsonHandler):
                 404, "Version {0} of the app {1} was not found.".format(
                     app_version, app_name))
 
-        discovery = version.discovery + (("/v" + version.api) if version.api else "")
-
         res = {
-            "discovery": discovery
+            "discovery": version.discovery
         }
 
         res.update(version.data)

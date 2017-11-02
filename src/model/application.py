@@ -28,7 +28,6 @@ class ApplicationAdapter(object):
         self.application_id = data.get("application_id")
         self.name = data.get("application_name")
         self.title = data.get("application_title")
-        self.min_api = data.get("min_api")
 
 
 class ApplicationVersionAdapter(object):
@@ -37,7 +36,6 @@ class ApplicationVersionAdapter(object):
         self.application_id = data.get("application_id")
         self.name = data.get("version_name")
         self.environment = data.get("version_environment")
-        self.api = data.get("api_version")
 
 
 class ApplicationsModel(Model):
@@ -64,7 +62,7 @@ class ApplicationsModel(Model):
         return ["applications", "application_versions"]
 
     @coroutine
-    def create_application(self, application_name, application_title, min_api):
+    def create_application(self, application_name, application_title):
 
         try:
             yield self.find_application(application_name)
@@ -77,10 +75,9 @@ class ApplicationsModel(Model):
             record_id = yield self.db.insert(
                 """
                     INSERT INTO `applications`
-                    (`application_name`, `application_title`, `min_api`)
-                    VALUES (%s, %s, %s);
-                """, application_name, application_title, min_api
-            )
+                    (`application_name`, `application_title`)
+                    VALUES (%s, %s);
+                """, application_name, application_title)
         except DuplicateError:
             raise ApplicationExists()
         except DatabaseError as e:
@@ -89,7 +86,7 @@ class ApplicationsModel(Model):
         raise Return(record_id)
 
     @coroutine
-    def create_application_version(self, application_id, version_name, version_environment, api_version):
+    def create_application_version(self, application_id, version_name, version_environment):
 
         if version_name == DEFAULT:
             raise
@@ -105,10 +102,10 @@ class ApplicationsModel(Model):
             version_id = yield self.db.insert(
                 """
                     INSERT INTO `application_versions`
-                    (`application_id`, `version_name`, version_environment, `api_version`)
-                    VALUES (%s, %s, %s, %s);
+                    (`application_id`, `version_name`, version_environment)
+                    VALUES (%s, %s, %s);
                 """,
-                application_id, version_name, version_environment, api_version)
+                application_id, version_name, version_environment)
 
         except DatabaseError as e:
             raise ApplicationError("Failed to create application version: " + e.args[1])
@@ -253,33 +250,36 @@ class ApplicationsModel(Model):
         raise Return(map(ApplicationAdapter, apps))
 
     @coroutine
-    def update_application(self, application_id, application_name, application_title, min_api):
+    def update_application(self, application_id, application_name, application_title):
         try:
-            yield self.db.execute(
+            updated = yield self.db.execute(
                 """
                     UPDATE `applications`
-                    SET `application_name`=%s, `application_title`=%s, `min_api`=%s
+                    SET `application_name`=%s, `application_title`=%s
                     WHERE `application_id`=%s;
-                """, application_name, application_title, min_api, application_id)
+                """, application_name, application_title, application_id)
         except DuplicateError:
             raise ApplicationExists()
         except DatabaseError as e:
             raise ApplicationError("Failed to update application: " + e.args[1])
 
-    @coroutine
-    def update_application_version(self, application_id, version_name, version_env, api_version):
+        raise Return(bool(updated))
 
+    @coroutine
+    def update_application_version(self, application_id, version_name, version_env):
         try:
-            yield self.db.execute(
+            updated = yield self.db.execute(
                 """
                     UPDATE `application_versions`
-                    SET `version_name`=%s, version_environment=%s, `api_version`=%s
+                    SET `version_name`=%s, version_environment=%s
                     WHERE `version_id`=%s;
                 """,
-                version_name, version_env, api_version, application_id
+                version_name, version_env, application_id
             )
         except DatabaseError as e:
             raise ApplicationError("Failed to update application version: " + e.args[1])
+
+        raise Return(bool(updated))
 
 
 class VersionExists(Exception):

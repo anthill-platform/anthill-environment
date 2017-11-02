@@ -11,7 +11,6 @@ import common.keyvalue
 
 from model.environment import EnvironmentModel
 from model.application import ApplicationsModel
-from model.api import APIModel
 
 import admin
 import options as _opts
@@ -29,7 +28,6 @@ class EnvironmentServer(common.server.Server):
 
         self.environment = EnvironmentModel(self.db)
         self.applications = ApplicationsModel(self.db, self.environment)
-        self.api = APIModel()
 
     def get_models(self):
         return [self.environment, self.applications]

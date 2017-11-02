@@ -3,7 +3,6 @@ CREATE TABLE `application_versions` (
   `application_id` int(11) NOT NULL,
   `version_name` varchar(45) NOT NULL,
   `version_environment` int(11) NOT NULL,
-  `api_version` varchar(8) NOT NULL DEFAULT '1.0',
   PRIMARY KEY (`version_id`),
   KEY `app_key_idx` (`application_id`),
   KEY `app_env_idx` (`version_environment`),
