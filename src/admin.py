@@ -30,17 +30,7 @@ class ApplicationController(a.AdminController):
 
         versions = yield applications.list_application_versions(record_id)
 
-        api = self.application.api
-        api_versions_ = yield api.get_versions()
-
-        api_versions = {
-            v: v for v in api_versions_
-        }
-        api_versions[""] = "default"
-
         result = {
-            "api_versions": api_versions,
-            "min_api": app.min_api,
             "application_name": app.name,
             "application_title": app.title,
             "versions": versions,
@@ -55,9 +45,7 @@ class ApplicationController(a.AdminController):
             ], data.get("app_name", "Application")),
             a.form("Application information", fields={
                 "application_name": a.field("Application ID", "text", "primary", "non-empty"),
-                "application_title": a.field("Application Title", "text", "primary", "non-empty"),
-                "min_api": a.field("Minimum API version", "select", "primary", "non-empty",
-                                   values=data["api_versions"]),
+                "application_title": a.field("Application Title", "text", "primary", "non-empty")
             }, methods={
                 "update": a.method("Update", "primary", order=1),
                 "delete": a.method("Delete", "danger", order=2)
@@ -76,7 +64,7 @@ class ApplicationController(a.AdminController):
         return ["env_admin"]
 
     @coroutine
-    def update(self, application_name, application_title, min_api):
+    def update(self, application_name, application_title):
         record_id = self.context.get("record_id")
 
         applications = self.application.applications
@@ -85,8 +73,7 @@ class ApplicationController(a.AdminController):
             yield applications.update_application(
                 record_id,
                 application_name,
-                application_title,
-                min_api)
+                application_title)
 
         except ApplicationExists:
             raise a.ActionError("Such application already exists")
@@ -125,7 +112,6 @@ class ApplicationVersionController(a.AdminController):
 
         environment = self.application.environment
         applications = self.application.applications
-        api = self.application.api
 
         try:
             app = yield applications.find_application(app_id)
@@ -141,23 +127,12 @@ class ApplicationVersionController(a.AdminController):
         except VersionNotFound:
             raise a.ActionError("Version was not found.")
 
-        min_api = app.min_api
-
-        api_versions_ = yield api.get_versions(min_api=min_api)
-
-        api_versions = {
-            v: v for v in api_versions_
-        }
-        api_versions[""] = "default"
-
         result = {
             "app_title": app.title,
             "application_id": application_id,
             "envs": (yield environment.list_environments()),
             "version_name": version.name,
-            "version_env": version.environment,
-            "api_version": version.api,
-            "api_versions": api_versions
+            "version_env": version.environment
         }
 
         raise a.Return(result)
@@ -172,9 +147,7 @@ class ApplicationVersionController(a.AdminController):
                 "version_name": a.field("Version name", "text", "primary", "non-empty"),
                 "version_env": a.field("Environment", "select", "primary", "non-empty", values={
                     env.environment_id: env.name for env in data["envs"]
-                }),
-                "api_version": a.field("API version", "select", "primary", "non-empty",
-                                       values=data["api_versions"]),
+                })
             }, methods={
                 "update": a.method("Update", "primary", order=1),
                 "delete": a.method("Delete", "danger", order=2)
@@ -189,7 +162,7 @@ class ApplicationVersionController(a.AdminController):
         return ["env_admin"]
 
     @coroutine
-    def update(self, version_name, version_env, api_version):
+    def update(self, version_name, version_env):
         record_id = self.context.get("version_id")
 
         applications = self.application.applications
@@ -197,8 +170,7 @@ class ApplicationVersionController(a.AdminController):
         yield applications.update_application_version(
             record_id,
             version_name,
-            version_env,
-            api_version)
+            version_env)
 
         raise a.Redirect(
             "app_version",
@@ -390,12 +362,12 @@ class EnvironmentsController(a.AdminController):
 
 class NewApplicationController(a.AdminController):
     @coroutine
-    def create(self, app_name, app_title, min_api):
+    def create(self, app_name, app_title):
 
         applications = self.application.applications
 
         try:
-            record_id = yield applications.create_application(app_name, app_title, min_api)
+            record_id = yield applications.create_application(app_name, app_title)
         except ApplicationExists:
             raise a.ActionError("Application with id " + app_name + " already exists.")
 
@@ -406,15 +378,7 @@ class NewApplicationController(a.AdminController):
 
     @coroutine
     def get(self):
-        api = self.application.api
-        api_versions = yield api.get_versions()
-
-        result = {
-            "api_versions": api_versions,
-            "min_api": api_versions[-1] if api_versions else ""
-        }
-
-        raise Return(result)
+        raise Return({})
 
     def render(self, data):
         return [
@@ -423,9 +387,7 @@ class NewApplicationController(a.AdminController):
             ], "New application"),
             a.form("New application", fields={
                 "app_name": a.field("Application ID", "text", "primary", "non-empty"),
-                "app_title": a.field("Application Title", "text", "primary", "non-empty"),
-                "min_api": a.field("Minimum API version", "select", "primary", "non-empty",
-                                   values={ver: ver for ver in data["api_versions"]}),
+                "app_title": a.field("Application Title", "text", "primary", "non-empty")
             }, methods={
                 "create": a.method("Create", "primary")
             }, data=data),
@@ -440,7 +402,7 @@ class NewApplicationController(a.AdminController):
 
 class NewApplicationVersionController(a.AdminController):
     @coroutine
-    def create(self, version_name, version_env, api_version):
+    def create(self, version_name, version_env):
 
         applications = self.application.applications
 
@@ -457,8 +419,7 @@ class NewApplicationVersionController(a.AdminController):
             record_id = yield applications.create_application_version(
                 application_id,
                 version_name,
-                version_env,
-                api_version)
+                version_env)
 
         except VersionExists:
             raise a.ActionError("Version already exists")
@@ -477,7 +438,6 @@ class NewApplicationVersionController(a.AdminController):
 
         environment = self.application.environment
         applications = self.application.applications
-        api = self.application.api
 
         try:
             app = yield applications.find_application(app_id)
@@ -485,18 +445,9 @@ class NewApplicationVersionController(a.AdminController):
             raise a.ActionError("App " + str(app_id) + " was not found.")
 
         application_id = app.application_id
-        min_api = app.min_api
-
-        api_versions_ = yield api.get_versions(min_api=min_api)
-        api_versions = {
-            v: v for v in api_versions_
-        }
-        api_versions[""] = "default"
 
         result = {
             "app_name": app.title,
-            "api_versions": api_versions,
-            "api_version": min_api,
             "application_id": application_id,
             "envs": (yield environment.list_environments())
         }
@@ -513,9 +464,7 @@ class NewApplicationVersionController(a.AdminController):
                 "version_name": a.field("Version name", "text", "primary", "non-empty"),
                 "version_env": a.field("Environment", "select", "primary", "non-empty", values={
                     env.environment_id: env.name for env in data["envs"]
-                }),
-                "api_version": a.field("API version", "select", "primary", "non-empty",
-                                       values=data["api_versions"]),
+                })
             }, methods={
                 "create": a.method("Create", "primary")
             }, data=data),
