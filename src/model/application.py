@@ -48,7 +48,7 @@ class ApplicationsModel(Model):
 
     @coroutine
     def setup_table_applications(self):
-        yield self.create_application("test", "Test application", "0.1")
+        yield self.create_application("test", "Test application")
 
     @coroutine
     def setup_table_application_versions(self):
@@ -56,7 +56,7 @@ class ApplicationsModel(Model):
         dev_env = yield self.environment.find_environment("dev")
         test_app = yield self.find_application("test")
 
-        yield self.create_application_version(test_app.application_id, "1.0", dev_env.environment_id, "0.1")
+        yield self.create_application_version(test_app.application_id, "1.0", dev_env.environment_id)
 
     def get_setup_tables(self):
         return ["applications", "application_versions"]
