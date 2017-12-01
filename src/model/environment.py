@@ -4,6 +4,7 @@ import ujson
 
 from common.database import DuplicateError, DatabaseError
 from common.model import Model
+from common.validate import validate
 
 
 class EnvironmentDataError(Exception):
@@ -69,21 +70,15 @@ class EnvironmentModel(Model):
     def delete_environment(self, environment_id):
 
         try:
-            with (yield self.db.acquire()) as db:
-                yield db.execute(
-                    """
-                        DELETE FROM `application_versions`
-                        WHERE `application_versions`.`version_environment`=%s;
-                    """, environment_id)
-
-                yield db.execute(
-                    """
-                        DELETE FROM `environments`
-                        WHERE `environment_id`=%s;
-                    """, environment_id)
-
+            deleted = yield self.db.execute(
+                """
+                    DELETE FROM `environments`
+                    WHERE `environment_id`=%s;
+                """, environment_id)
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to delete environment: " + e.args[1])
+        else:
+            raise Return(bool(deleted))
 
     @coroutine
     def find_environment(self, environment_name):
@@ -172,35 +167,26 @@ class EnvironmentModel(Model):
         raise Return(EnvironmentPlusVersionAdapter(version))
 
     @coroutine
+    @validate(data="json_dict")
     def set_scheme(self, data):
 
         if not isinstance(data, dict):
             raise AttributeError("data is not a dict")
 
         try:
-            yield self.get_scheme(exception=True)
-        except SchemeNotExists:
-            try:
-                yield self.db.insert(
-                    """
-                        INSERT INTO `scheme`
-                        (`data`)
-                        VALUES (%s);
-                    """, ujson.dumps(data)
-                )
-            except DatabaseError as e:
-                raise EnvironmentDataError("Failed to insert scheme: " + e.args[1])
+            updated = yield self.db.execute(
+                """
+                    INSERT INTO `scheme`
+                    (`data`)
+                    VALUES (%s)
+                    ON DUPLICATE KEY 
+                    UPDATE `data`=VALUES(`data`);
+                """, ujson.dumps(data)
+            )
+        except DatabaseError as e:
+            raise EnvironmentDataError("Failed to insert scheme: " + e.args[1])
         else:
-            try:
-                yield self.db.execute(
-                    """
-                        UPDATE `scheme`
-                        SET `data`=%s;
-                    """,
-                    ujson.dumps(data)
-                )
-            except DatabaseError as e:
-                raise EnvironmentDataError("Failed to update scheme: " + e.args[1])
+            raise Return(bool(updated))
 
     @coroutine
     def update_environment(self, record_id, env_name, env_discovery, env_data):

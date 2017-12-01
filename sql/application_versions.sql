@@ -6,6 +6,6 @@ CREATE TABLE `application_versions` (
   PRIMARY KEY (`version_id`),
   KEY `app_key_idx` (`application_id`),
   KEY `app_env_idx` (`version_environment`),
-  CONSTRAINT `app_env` FOREIGN KEY (`version_environment`) REFERENCES `environments` (`environment_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `app_key` FOREIGN KEY (`application_id`) REFERENCES `applications` (`application_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  CONSTRAINT `application_versions_ibfk_1` FOREIGN KEY (`application_id`) REFERENCES `applications` (`application_id`) ON DELETE CASCADE,
+  CONSTRAINT `application_versions_ibfk_2` FOREIGN KEY (`version_environment`) REFERENCES `environments` (`environment_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

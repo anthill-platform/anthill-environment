@@ -116,32 +116,29 @@ class ApplicationsModel(Model):
     def delete_application(self, application_id):
 
         try:
-            with (yield self.db.acquire()) as db:
-                yield db.execute(
-                    """
-                        DELETE FROM `application_versions`
-                        WHERE `application_id`=%s;
-                    """, application_id)
-
-                yield db.execute(
-                    """
-                        DELETE FROM `applications`
-                        WHERE `application_id`=%s;
-                    """, application_id)
+            deleted = yield self.db.execute(
+                """
+                    DELETE FROM `applications`
+                    WHERE `application_id`=%s;
+                """, application_id)
 
         except DatabaseError as e:
             raise ApplicationError("Failed to delete application: " + e.args[1])
+        else:
+            raise Return(bool(deleted))
 
     @coroutine
     def delete_application_version(self, version_id):
         try:
-            yield self.db.execute(
+            deleted = yield self.db.execute(
                 """
                     DELETE FROM `application_versions`
                     WHERE `version_id`=%s;
                 """, version_id)
         except DatabaseError as e:
             raise ApplicationError("Failed to delete application version: " + e.args[1])
+        else:
+            raise Return(bool(deleted))
 
     @coroutine
     def find_application(self, application_name):
@@ -266,15 +263,15 @@ class ApplicationsModel(Model):
         raise Return(bool(updated))
 
     @coroutine
-    def update_application_version(self, application_id, version_name, version_env):
+    def update_application_version(self, application_id, version_id, version_name, version_env):
         try:
             updated = yield self.db.execute(
                 """
                     UPDATE `application_versions`
                     SET `version_name`=%s, version_environment=%s
-                    WHERE `version_id`=%s;
+                    WHERE `version_id`=%s AND `application_id`=%s;
                 """,
-                version_name, version_env, application_id
+                version_name, version_env, version_id, application_id
             )
         except DatabaseError as e:
             raise ApplicationError("Failed to update application version: " + e.args[1])

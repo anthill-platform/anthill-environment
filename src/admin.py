@@ -5,6 +5,7 @@ import common.admin as a
 
 from model.environment import EnvironmentNotFound, EnvironmentExists
 from model.application import VersionNotFound, VersionExists, ApplicationNotFound, ApplicationExists, ReservedName
+from model.application import ApplicationError
 
 
 class ApplicationController(a.AdminController):
@@ -14,7 +15,16 @@ class ApplicationController(a.AdminController):
 
         applications = self.application.applications
 
-        yield applications.delete_application(record_id)
+        try:
+            app = yield applications.get_application(record_id)
+        except ApplicationNotFound:
+            raise a.ActionError("Application was not found.")
+
+        deleted = yield applications.delete_application(record_id)
+
+        if deleted:
+            self.audit("times", "Deleted an application",
+                       application_title=app.title)
 
         raise a.Redirect("apps", message="Application has been deleted")
 
@@ -53,7 +63,7 @@ class ApplicationController(a.AdminController):
             a.links("Application versions", links=[
                 a.link("app_version", v.name, icon="tags", app_id=data.get("application_name"),
                        version_id=v.version_id) for v in data["versions"]
-                ]),
+            ]),
             a.links("Navigate", [
                 a.link("apps", "Go back", icon="chevron-left"),
                 a.link("new_app_version", "New application version", "plus", app_id=data.get("application_name"))
@@ -70,6 +80,11 @@ class ApplicationController(a.AdminController):
         applications = self.application.applications
 
         try:
+            app = yield applications.get_application(record_id)
+        except ApplicationNotFound:
+            raise a.ActionError("Application was not found.")
+
+        try:
             yield applications.update_application(
                 record_id,
                 application_name,
@@ -77,6 +92,11 @@ class ApplicationController(a.AdminController):
 
         except ApplicationExists:
             raise a.ActionError("Such application already exists")
+
+        self.audit("mobile", "Updated an application",
+                   only_if=True,
+                   application_name=(app.name, application_name),
+                   application_title=(app.title, application_title))
 
         raise a.Redirect(
             "app",
@@ -90,22 +110,35 @@ class ApplicationVersionController(a.AdminController):
 
         applications = self.application.applications
 
-        record_id = self.context.get("version_id")
-        app_id = self.context.get("app_id")
-
-        yield applications.delete_application_version(record_id)
+        version_id = self.context.get("version_id")
+        app_name = self.context.get("app_id")
 
         try:
-            app = yield applications.find_application(app_id)
+            app = yield applications.find_application(app_name)
         except ApplicationNotFound:
             raise a.ActionError("App was not found.")
 
-        record_id = app.application_id
+        app_id = app.application_id
+
+        try:
+            version = yield applications.get_application_version(app_id, version_id)
+        except VersionNotFound:
+            raise a.ActionError("No such version")
+        except ApplicationError as e:
+            raise a.ActionError(e.message)
+
+        deleted = yield applications.delete_application_version(version_id)
+
+        if deleted:
+            self.audit("times", "Deleted application version",
+                       version=version.name,
+                       application_name=app.name,
+                       application_title=app.title)
 
         raise a.Redirect(
             "app",
             message="Application version has been deleted",
-            record_id=record_id)
+            record_id=app_id)
 
     @coroutine
     def get(self, app_id, version_id):
@@ -164,13 +197,46 @@ class ApplicationVersionController(a.AdminController):
     @coroutine
     def update(self, version_name, version_env):
         record_id = self.context.get("version_id")
+        app_id = self.context.get("app_id")
 
         applications = self.application.applications
 
-        yield applications.update_application_version(
+        try:
+            app = yield applications.find_application(app_id)
+        except ApplicationNotFound:
+            raise a.ActionError("App was not found.")
+
+        application_id = app.application_id
+
+        try:
+            version = yield applications.get_application_version(application_id, record_id)
+        except ApplicationNotFound:
+            raise a.ActionError("Application was not found.")
+        except VersionNotFound:
+            raise a.ActionError("Version was not found.")
+
+        environment = self.application.environment
+
+        try:
+            new_env = yield environment.get_environment(version_env)
+            if str(version.environment) == str(new_env.environment_id):
+                old_env = new_env
+            else:
+                old_env = yield environment.get_environment(version.environment)
+        except EnvironmentNotFound:
+            raise a.ActionError("No such environment")
+
+        updated = yield applications.update_application_version(
+            application_id,
             record_id,
             version_name,
             version_env)
+
+        if updated:
+            self.audit("tags", "Updated application version", only_if=True,
+                       application_name=app.name,
+                       version_name=(version.name, version_name),
+                       version_environment=(old_env.name, new_env.name))
 
         raise a.Redirect(
             "app_version",
@@ -213,7 +279,16 @@ class EnvironmentController(a.AdminController):
 
         environment = self.application.environment
 
-        yield environment.delete_environment(record_id)
+        try:
+            env = yield environment.get_environment(record_id)
+        except EnvironmentNotFound:
+            raise a.ActionError("No such environment")
+
+        deleted = yield environment.delete_environment(record_id)
+
+        if deleted:
+            self.audit("times", "Deleted an environment",
+                       environment_name=env.name)
 
         raise a.Redirect("envs", message="Environment has been deleted")
 
@@ -272,7 +347,18 @@ class EnvironmentController(a.AdminController):
 
         environment = self.application.environment
 
-        yield environment.update_environment(record_id, env_name, env_discovery, env_data)
+        try:
+            env = yield environment.get_environment(record_id)
+        except EnvironmentNotFound:
+            raise a.ActionError("No such environment")
+
+        updated = yield environment.update_environment(record_id, env_name, env_discovery, env_data)
+
+        if updated:
+            self.audit("random", "Updated an environment",
+                       environment_name=(env.name, env_name),
+                       environment_discovery_location=(env.discovery, env_discovery),
+                       environment_variables=(env.data, env_data))
 
         raise a.Redirect(
             "environment",
@@ -322,13 +408,15 @@ class EnvironmentVariablesController(a.AdminController):
 
         environment = self.application.environment
 
-        yield environment.set_scheme(scheme)
+        old_scheme = yield environment.get_scheme()
 
-        result = {
-            "scheme": scheme
-        }
+        updated = yield environment.set_scheme(scheme)
 
-        raise a.Return(result)
+        if updated:
+            self.audit("cogs", "Updated environment variables",
+                       scheme=(old_scheme, scheme))
+
+        raise a.Redirect("vars", message="Variables scheme has been updated")
 
 
 class EnvironmentsController(a.AdminController):
@@ -348,7 +436,7 @@ class EnvironmentsController(a.AdminController):
             a.breadcrumbs([], "Environments"),
             a.links("Environments", links=[
                 a.link("environment", env.name, icon="random", record_id=env.environment_id) for env in data["envs"]
-                ]),
+            ]),
             a.links("Navigate", [
                 a.link("index", "Go back", icon="chevron-left"),
                 a.link("vars", "Environment variables", "cog"),
@@ -370,6 +458,10 @@ class NewApplicationController(a.AdminController):
             record_id = yield applications.create_application(app_name, app_title)
         except ApplicationExists:
             raise a.ActionError("Application with id " + app_name + " already exists.")
+
+        self.audit("plus", "Created an application",
+                   application_name=app_name,
+                   application_title=app_title)
 
         raise a.Redirect(
             "app",
@@ -413,6 +505,13 @@ class NewApplicationVersionController(a.AdminController):
         except ApplicationNotFound:
             raise a.ActionError("App " + str(app_id) + " was not found.")
 
+        environment = self.application.environment
+
+        try:
+            env = yield environment.get_environment(version_env)
+        except EnvironmentNotFound:
+            raise a.ActionError("No such environment")
+
         application_id = app.application_id
 
         try:
@@ -420,12 +519,16 @@ class NewApplicationVersionController(a.AdminController):
                 application_id,
                 version_name,
                 version_env)
-
         except VersionExists:
             raise a.ActionError("Version already exists")
-
         except ReservedName:
             raise a.ActionError("This version name is reserved")
+        else:
+            self.audit("plus", "Created new application version",
+                       version=version_name,
+                       environment=env.name,
+                       application_name=app.name,
+                       application_title=app.title)
 
         raise a.Redirect(
             "app_version",
@@ -487,6 +590,10 @@ class NewEnvironmentController(a.AdminController):
             record_id = yield environment.create_environment(env_name, env_discovery)
         except VersionExists:
             raise a.ActionError("Such environment already exists.")
+
+        self.audit("plus", "Created new environment",
+                   environment_name=env_name,
+                   discovery_service_location=env_discovery)
 
         raise a.Redirect(
             "environment",
