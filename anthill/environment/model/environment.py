@@ -1,10 +1,9 @@
-from tornado.gen import coroutine, Return
+
+from anthill.common.database import DuplicateError, DatabaseError
+from anthill.common.model import Model
+from anthill.common.validate import validate
 
 import ujson
-
-from common.database import DuplicateError, DatabaseError
-from common.model import Model
-from common.validate import validate
 
 
 class EnvironmentDataError(Exception):
@@ -36,22 +35,19 @@ class EnvironmentModel(Model):
     def get_setup_db(self):
         return self.db
 
-    @coroutine
-    def setup_table_environments(self):
-        yield self.create_environment("dev", "http://localhost:9502")
+    async def setup_table_environments(self):
+        await self.create_environment("dev", "http://localhost:9502")
 
-    @coroutine
-    def setup_table_scheme(self):
-        yield self.set_scheme({"type": "object", "properties": {"test-option": {"type": "string"}}})
+    async def setup_table_scheme(self):
+        await self.set_scheme({"type": "object", "properties": {"test-option": {"type": "string"}}})
 
     def get_setup_tables(self):
         return ["environments", "scheme"]
 
-    @coroutine
-    def create_environment(self, environment_name, environment_discovery):
+    async def create_environment(self, environment_name, environment_discovery):
 
         try:
-            record_id = yield self.db.insert(
+            record_id = await self.db.insert(
                 """
                     INSERT INTO `environments`
                     (`environment_name`, `environment_discovery`, `environment_data`)
@@ -64,13 +60,12 @@ class EnvironmentModel(Model):
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to create environment: " + e.args[1])
 
-        raise Return(record_id)
+        return record_id
 
-    @coroutine
-    def delete_environment(self, environment_id):
+    async def delete_environment(self, environment_id):
 
         try:
-            deleted = yield self.db.execute(
+            deleted = await self.db.execute(
                 """
                     DELETE FROM `environments`
                     WHERE `environment_id`=%s;
@@ -78,12 +73,11 @@ class EnvironmentModel(Model):
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to delete environment: " + e.args[1])
         else:
-            raise Return(bool(deleted))
+            return bool(deleted)
 
-    @coroutine
-    def find_environment(self, environment_name):
+    async def find_environment(self, environment_name):
         try:
-            env = yield self.db.get(
+            env = await self.db.get(
                 """
                     SELECT `environment_id`
                     FROM `environments`
@@ -95,12 +89,11 @@ class EnvironmentModel(Model):
         if env is None:
             raise EnvironmentNotFound()
 
-        raise Return(EnvironmentAdapter(env))
+        return EnvironmentAdapter(env)
 
-    @coroutine
-    def get_environment(self, environment_id):
+    async def get_environment(self, environment_id):
         try:
-            env = yield self.db.get(
+            env = await self.db.get(
                 """
                     SELECT *
                     FROM `environments`
@@ -112,12 +105,11 @@ class EnvironmentModel(Model):
         if env is None:
             raise EnvironmentNotFound()
 
-        raise Return(EnvironmentAdapter(env))
+        return EnvironmentAdapter(env)
 
-    @coroutine
-    def list_environments(self):
+    async def list_environments(self):
         try:
-            environments = yield self.db.query(
+            environments = await self.db.query(
                 """
                     SELECT *
                     FROM `environments`;
@@ -126,12 +118,11 @@ class EnvironmentModel(Model):
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to list environments: " + e.args[1])
 
-        raise Return(map(EnvironmentAdapter, environments))
+        return map(EnvironmentAdapter, environments)
 
-    @coroutine
-    def get_scheme(self, exception=False):
+    async def get_scheme(self, exception=False):
         try:
-            env = yield self.db.get(
+            env = await self.db.get(
                 """
                     SELECT `data` FROM `scheme`;
                 """)
@@ -142,15 +133,14 @@ class EnvironmentModel(Model):
             if exception:
                 raise SchemeNotExists()
 
-            raise Return({})
+            return {}
 
-        raise Return(env["data"])
+        return env["data"]
 
-    @coroutine
-    def get_version_environment(self, app_name, app_version):
+    async def get_version_environment(self, app_name, app_version):
 
         try:
-            version = yield self.db.get(
+            version = await self.db.get(
                 """
                     SELECT `environment_discovery`, `environment_data`
                     FROM `applications`, `application_versions`, `environments`
@@ -164,17 +154,16 @@ class EnvironmentModel(Model):
         if version is None:
             raise EnvironmentNotFound()
 
-        raise Return(EnvironmentPlusVersionAdapter(version))
+        return EnvironmentPlusVersionAdapter(version)
 
-    @coroutine
     @validate(data="json_dict")
-    def set_scheme(self, data):
+    async def set_scheme(self, data):
 
         if not isinstance(data, dict):
             raise AttributeError("data is not a dict")
 
         try:
-            updated = yield self.db.execute(
+            updated = await self.db.execute(
                 """
                     INSERT INTO `scheme`
                     (`data`)
@@ -186,15 +175,14 @@ class EnvironmentModel(Model):
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to insert scheme: " + e.args[1])
         else:
-            raise Return(bool(updated))
+            return bool(updated)
 
-    @coroutine
-    def update_environment(self, record_id, env_name, env_discovery, env_data):
+    async def update_environment(self, record_id, env_name, env_discovery, env_data):
         if not isinstance(env_data, dict):
             raise AttributeError("env_data is not a dict")
 
         try:
-            updated = yield self.db.execute("""
+            updated = await self.db.execute("""
                 UPDATE `environments`
                 SET `environment_name`=%s, `environment_discovery`=%s, `environment_data`=%s
                 WHERE `environment_id`=%s;
@@ -202,7 +190,7 @@ class EnvironmentModel(Model):
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to update environment: " + e.args[1])
 
-        raise Return(bool(updated))
+        return bool(updated)
 
 
 class EnvironmentNotFound(Exception):
@@ -215,4 +203,3 @@ class EnvironmentExists(Exception):
 
 class SchemeNotExists(Exception):
     pass
-

@@ -1,26 +1,24 @@
 import ujson
 
-from tornado.gen import coroutine, Return
-import common.admin as a
+import anthill.common.admin as a
 
-from model.environment import EnvironmentNotFound, EnvironmentExists
-from model.application import VersionNotFound, VersionExists, ApplicationNotFound, ApplicationExists, ReservedName
-from model.application import ApplicationError
+from . model.environment import EnvironmentNotFound, EnvironmentExists
+from . model.application import VersionNotFound, VersionExists, ApplicationNotFound, ApplicationExists, ReservedName
+from . model.application import ApplicationError
 
 
 class ApplicationController(a.AdminController):
-    @coroutine
-    def delete(self, **ignored):
+    async def delete(self, **ignored):
         record_id = self.context.get("record_id")
 
         applications = self.application.applications
 
         try:
-            app = yield applications.get_application(record_id)
+            app = await applications.get_application(record_id)
         except ApplicationNotFound:
             raise a.ActionError("Application was not found.")
 
-        deleted = yield applications.delete_application(record_id)
+        deleted = await applications.delete_application(record_id)
 
         if deleted:
             self.audit("times", "Deleted an application",
@@ -28,17 +26,16 @@ class ApplicationController(a.AdminController):
 
         raise a.Redirect("apps", message="Application has been deleted")
 
-    @coroutine
-    def get(self, record_id):
+    async def get(self, record_id):
 
         applications = self.application.applications
 
         try:
-            app = yield applications.get_application(record_id)
+            app = await applications.get_application(record_id)
         except ApplicationNotFound:
             raise a.ActionError("Application was not found.")
 
-        versions = yield applications.list_application_versions(record_id)
+        versions = await applications.list_application_versions(record_id)
 
         result = {
             "application_name": app.name,
@@ -46,7 +43,7 @@ class ApplicationController(a.AdminController):
             "versions": versions,
         }
 
-        raise a.Return(result)
+        return result
 
     def render(self, data):
         return [
@@ -73,19 +70,18 @@ class ApplicationController(a.AdminController):
     def access_scopes(self):
         return ["env_admin"]
 
-    @coroutine
-    def update(self, application_name, application_title):
+    async def update(self, application_name, application_title):
         record_id = self.context.get("record_id")
 
         applications = self.application.applications
 
         try:
-            app = yield applications.get_application(record_id)
+            app = await applications.get_application(record_id)
         except ApplicationNotFound:
             raise a.ActionError("Application was not found.")
 
         try:
-            yield applications.update_application(
+            await applications.update_application(
                 record_id,
                 application_name,
                 application_title)
@@ -105,8 +101,7 @@ class ApplicationController(a.AdminController):
 
 
 class ApplicationVersionController(a.AdminController):
-    @coroutine
-    def delete(self, **ignored):
+    async def delete(self, **ignored):
 
         applications = self.application.applications
 
@@ -114,20 +109,20 @@ class ApplicationVersionController(a.AdminController):
         app_name = self.context.get("app_id")
 
         try:
-            app = yield applications.find_application(app_name)
+            app = await applications.find_application(app_name)
         except ApplicationNotFound:
             raise a.ActionError("App was not found.")
 
         app_id = app.application_id
 
         try:
-            version = yield applications.get_application_version(app_id, version_id)
+            version = await applications.get_application_version(app_id, version_id)
         except VersionNotFound:
             raise a.ActionError("No such version")
         except ApplicationError as e:
             raise a.ActionError(e.message)
 
-        deleted = yield applications.delete_application_version(version_id)
+        deleted = await applications.delete_application_version(version_id)
 
         if deleted:
             self.audit("times", "Deleted application version",
@@ -140,21 +135,20 @@ class ApplicationVersionController(a.AdminController):
             message="Application version has been deleted",
             record_id=app_id)
 
-    @coroutine
-    def get(self, app_id, version_id):
+    async def get(self, app_id, version_id):
 
         environment = self.application.environment
         applications = self.application.applications
 
         try:
-            app = yield applications.find_application(app_id)
+            app = await applications.find_application(app_id)
         except ApplicationNotFound:
             raise a.ActionError("App was not found.")
 
         application_id = app.application_id
 
         try:
-            version = yield applications.get_application_version(application_id, version_id)
+            version = await applications.get_application_version(application_id, version_id)
         except ApplicationNotFound:
             raise a.ActionError("Application was not found.")
         except VersionNotFound:
@@ -163,12 +157,12 @@ class ApplicationVersionController(a.AdminController):
         result = {
             "app_title": app.title,
             "application_id": application_id,
-            "envs": (yield environment.list_environments()),
+            "envs": (await environment.list_environments()),
             "version_name": version.name,
             "version_env": version.environment
         }
 
-        raise a.Return(result)
+        return result
 
     def render(self, data):
         return [
@@ -194,22 +188,21 @@ class ApplicationVersionController(a.AdminController):
     def access_scopes(self):
         return ["env_admin"]
 
-    @coroutine
-    def update(self, version_name, version_env):
+    async def update(self, version_name, version_env):
         record_id = self.context.get("version_id")
         app_id = self.context.get("app_id")
 
         applications = self.application.applications
 
         try:
-            app = yield applications.find_application(app_id)
+            app = await applications.find_application(app_id)
         except ApplicationNotFound:
             raise a.ActionError("App was not found.")
 
         application_id = app.application_id
 
         try:
-            version = yield applications.get_application_version(application_id, record_id)
+            version = await applications.get_application_version(application_id, record_id)
         except ApplicationNotFound:
             raise a.ActionError("Application was not found.")
         except VersionNotFound:
@@ -218,15 +211,15 @@ class ApplicationVersionController(a.AdminController):
         environment = self.application.environment
 
         try:
-            new_env = yield environment.get_environment(version_env)
+            new_env = await environment.get_environment(version_env)
             if str(version.environment) == str(new_env.environment_id):
                 old_env = new_env
             else:
-                old_env = yield environment.get_environment(version.environment)
+                old_env = await environment.get_environment(version.environment)
         except EnvironmentNotFound:
             raise a.ActionError("No such environment")
 
-        updated = yield applications.update_application_version(
+        updated = await applications.update_application_version(
             application_id,
             record_id,
             version_name,
@@ -245,16 +238,15 @@ class ApplicationVersionController(a.AdminController):
 
 
 class ApplicationsController(a.AdminController):
-    @coroutine
-    def get(self):
+    async def get(self):
         applications = self.application.applications
-        apps = yield applications.list_applications()
+        apps = await applications.list_applications()
 
         result = {
             "apps": apps
         }
 
-        raise a.Return(result)
+        return result
 
     def render(self, data):
         return [
@@ -273,18 +265,17 @@ class ApplicationsController(a.AdminController):
 
 
 class EnvironmentController(a.AdminController):
-    @coroutine
-    def delete(self, **ignored):
+    async def delete(self, **ignored):
         record_id = self.context.get("record_id")
 
         environment = self.application.environment
 
         try:
-            env = yield environment.get_environment(record_id)
+            env = await environment.get_environment(record_id)
         except EnvironmentNotFound:
             raise a.ActionError("No such environment")
 
-        deleted = yield environment.delete_environment(record_id)
+        deleted = await environment.delete_environment(record_id)
 
         if deleted:
             self.audit("times", "Deleted an environment",
@@ -292,26 +283,23 @@ class EnvironmentController(a.AdminController):
 
         raise a.Redirect("envs", message="Environment has been deleted")
 
-    @coroutine
-    def get(self, record_id):
+    async def get(self, record_id):
 
         environment = self.application.environment
 
         try:
-            env = yield environment.get_environment(record_id)
+            env = await environment.get_environment(record_id)
         except EnvironmentNotFound:
             raise a.ActionError("Environment was not found.")
 
-        scheme = yield environment.get_scheme()
+        scheme = await environment.get_scheme()
 
-        result = {
+        return {
             "env_name": env.name,
             "env_discovery": env.discovery,
             "env_data": env.data,
             "scheme": scheme
         }
-
-        raise a.Return(result)
 
     def render(self, data):
         return [
@@ -336,8 +324,7 @@ class EnvironmentController(a.AdminController):
     def access_scopes(self):
         return ["env_envs_admin"]
 
-    @coroutine
-    def update(self, env_name, env_discovery, env_data, **ignored):
+    async def update(self, env_name, env_discovery, env_data, **ignored):
         record_id = self.context.get("record_id")
 
         try:
@@ -348,11 +335,11 @@ class EnvironmentController(a.AdminController):
         environment = self.application.environment
 
         try:
-            env = yield environment.get_environment(record_id)
+            env = await environment.get_environment(record_id)
         except EnvironmentNotFound:
             raise a.ActionError("No such environment")
 
-        updated = yield environment.update_environment(record_id, env_name, env_discovery, env_data)
+        updated = await environment.update_environment(record_id, env_name, env_discovery, env_data)
 
         if updated:
             self.audit("random", "Updated an environment",
@@ -367,18 +354,17 @@ class EnvironmentController(a.AdminController):
 
 
 class EnvironmentVariablesController(a.AdminController):
-    @coroutine
-    def get(self):
+    async def get(self):
 
         environment = self.application.environment
 
-        scheme = yield environment.get_scheme()
+        scheme = await environment.get_scheme()
 
         result = {
             "scheme": scheme
         }
 
-        raise a.Return(result)
+        return result
 
     def render(self, data):
         return [
@@ -399,8 +385,7 @@ class EnvironmentVariablesController(a.AdminController):
     def access_scopes(self):
         return ["env_envs_admin"]
 
-    @coroutine
-    def update(self, scheme):
+    async def update(self, scheme):
         try:
             scheme = ujson.loads(scheme)
         except (KeyError, ValueError):
@@ -408,9 +393,9 @@ class EnvironmentVariablesController(a.AdminController):
 
         environment = self.application.environment
 
-        old_scheme = yield environment.get_scheme()
+        old_scheme = await environment.get_scheme()
 
-        updated = yield environment.set_scheme(scheme)
+        updated = await environment.set_scheme(scheme)
 
         if updated:
             self.audit("cogs", "Updated environment variables",
@@ -420,16 +405,12 @@ class EnvironmentVariablesController(a.AdminController):
 
 
 class EnvironmentsController(a.AdminController):
-    @coroutine
-    def get(self):
+    async def get(self):
         environment = self.application.environment
-        envs = yield environment.list_environments()
 
-        result = {
-            "envs": envs
+        return {
+            "envs": await environment.list_environments()
         }
-
-        raise a.Return(result)
 
     def render(self, data):
         return [
@@ -449,13 +430,12 @@ class EnvironmentsController(a.AdminController):
 
 
 class NewApplicationController(a.AdminController):
-    @coroutine
-    def create(self, app_name, app_title):
+    async def create(self, app_name, app_title):
 
         applications = self.application.applications
 
         try:
-            record_id = yield applications.create_application(app_name, app_title)
+            record_id = await applications.create_application(app_name, app_title)
         except ApplicationExists:
             raise a.ActionError("Application with id " + app_name + " already exists.")
 
@@ -468,9 +448,8 @@ class NewApplicationController(a.AdminController):
             message="New application has been created",
             record_id=record_id)
 
-    @coroutine
-    def get(self):
-        raise Return({})
+    async def get(self):
+        return {}
 
     def render(self, data):
         return [
@@ -493,29 +472,28 @@ class NewApplicationController(a.AdminController):
 
 
 class NewApplicationVersionController(a.AdminController):
-    @coroutine
-    def create(self, version_name, version_env):
+    async def create(self, version_name, version_env):
 
         applications = self.application.applications
 
         app_id = self.context.get("app_id")
 
         try:
-            app = yield applications.find_application(app_id)
+            app = await applications.find_application(app_id)
         except ApplicationNotFound:
             raise a.ActionError("App " + str(app_id) + " was not found.")
 
         environment = self.application.environment
 
         try:
-            env = yield environment.get_environment(version_env)
+            env = await environment.get_environment(version_env)
         except EnvironmentNotFound:
             raise a.ActionError("No such environment")
 
         application_id = app.application_id
 
         try:
-            record_id = yield applications.create_application_version(
+            record_id = await applications.create_application_version(
                 application_id,
                 version_name,
                 version_env)
@@ -536,14 +514,13 @@ class NewApplicationVersionController(a.AdminController):
             app_id=app_id,
             version_id=record_id)
 
-    @coroutine
-    def get(self, app_id):
+    async def get(self, app_id):
 
         environment = self.application.environment
         applications = self.application.applications
 
         try:
-            app = yield applications.find_application(app_id)
+            app = await applications.find_application(app_id)
         except ApplicationNotFound:
             raise a.ActionError("App " + str(app_id) + " was not found.")
 
@@ -552,10 +529,10 @@ class NewApplicationVersionController(a.AdminController):
         result = {
             "app_name": app.title,
             "application_id": application_id,
-            "envs": (yield environment.list_environments())
+            "envs": (await environment.list_environments())
         }
 
-        raise a.Return(result)
+        return result
 
     def render(self, data):
         return [
@@ -581,13 +558,12 @@ class NewApplicationVersionController(a.AdminController):
 
 
 class NewEnvironmentController(a.AdminController):
-    @coroutine
-    def create(self, env_name, env_discovery):
+    async def create(self, env_name, env_discovery):
 
         environment = self.application.environment
 
         try:
-            record_id = yield environment.create_environment(env_name, env_discovery)
+            record_id = await environment.create_environment(env_name, env_discovery)
         except VersionExists:
             raise a.ActionError("Such environment already exists.")
 

@@ -10,7 +10,7 @@ This service solves two problems:
 2. Production environment should be divided from development with no side effects
 
 ## REST API
-Please refer to the <a href="doc/API.md">API Documentation</a> for more information.
+Please refer to the <a href="https://docs.anthillplatform.org/en/latest/services/environment.html">Documentation</a> for more information.
 
 ## A Sandbox
 While the game is being developed, usually it runs on special development environment to ensure the real players are not affected. And eventually, should be switched to production. However, usually the "environment switch" would require a new game build with new environment information. Yet every new build should be tested before shipping ... in development environment.

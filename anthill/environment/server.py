@@ -1,26 +1,21 @@
 
-from common.options import options
+from anthill.common.options import options
 
-import handler
-import common.server
-import common.handler
-import common.sign
-import common.access
-import common.database
-import common.keyvalue
+from . import handler as h
+from . import admin
+from . import options as _opts
 
-from model.environment import EnvironmentModel
-from model.application import ApplicationsModel
+from anthill.common import server, access, database
 
-import admin
-import options as _opts
+from . model.environment import EnvironmentModel
+from . model.application import ApplicationsModel
 
 
-class EnvironmentServer(common.server.Server):
+class EnvironmentServer(server.Server):
     def __init__(self):
         super(EnvironmentServer, self).__init__()
 
-        self.db = common.database.Database(
+        self.db = database.Database(
             host=options.db_host,
             database=options.db_name,
             user=options.db_username,
@@ -54,15 +49,15 @@ class EnvironmentServer(common.server.Server):
         }
 
     def get_internal_handler(self):
-        return handler.InternalHandler(self)
+        return h.InternalHandler(self)
 
     def get_handlers(self):
         return [
-            (r"/(.*)/(.*)", handler.DiscoverHandler),
+            (r"/(.*)/(.*)", h.DiscoverHandler),
         ]
 
 
 if __name__ == "__main__":
-    stt = common.server.init()
-    common.access.AccessToken.init([common.access.public()])
-    common.server.start(EnvironmentServer)
+    stt = server.init()
+    access.AccessToken.init([access.public()])
+    server.start(EnvironmentServer)

@@ -1,7 +1,6 @@
-from tornado.gen import coroutine, Return
 
-from common.database import DuplicateError, DatabaseError
-from common.model import Model
+from anthill.common.database import DuplicateError, DatabaseError
+from anthill.common.model import Model
 
 
 DEFAULT = "def"
@@ -46,33 +45,30 @@ class ApplicationsModel(Model):
     def get_setup_db(self):
         return self.db
 
-    @coroutine
-    def setup_table_applications(self):
-        yield self.create_application("test", "Test application")
+    async def setup_table_applications(self):
+        await self.create_application("test", "Test application")
 
-    @coroutine
-    def setup_table_application_versions(self):
+    async def setup_table_application_versions(self):
 
-        dev_env = yield self.environment.find_environment("dev")
-        test_app = yield self.find_application("test")
+        dev_env = await self.environment.find_environment("dev")
+        test_app = await self.find_application("test")
 
-        yield self.create_application_version(test_app.application_id, "1.0", dev_env.environment_id)
+        await self.create_application_version(test_app.application_id, "1.0", dev_env.environment_id)
 
     def get_setup_tables(self):
         return ["applications", "application_versions"]
 
-    @coroutine
-    def create_application(self, application_name, application_title):
+    async def create_application(self, application_name, application_title):
 
         try:
-            yield self.find_application(application_name)
+            await self.find_application(application_name)
         except ApplicationNotFound:
             pass
         else:
             raise ApplicationExists()
 
         try:
-            record_id = yield self.db.insert(
+            record_id = await self.db.insert(
                 """
                     INSERT INTO `applications`
                     (`application_name`, `application_title`)
@@ -83,23 +79,22 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to create application: " + e.args[1])
 
-        raise Return(record_id)
+        return record_id
 
-    @coroutine
-    def create_application_version(self, application_id, version_name, version_environment):
+    async def create_application_version(self, application_id, version_name, version_environment):
 
         if version_name == DEFAULT:
-            raise
+            raise ApplicationError("Version '{0}' is reserved".format(DEFAULT))
 
         try:
-            yield self.find_application_version(application_id, version_name)
+            await self.find_application_version(application_id, version_name)
         except VersionNotFound:
             pass
         else:
             raise ReservedName()
 
         try:
-            version_id = yield self.db.insert(
+            version_id = await self.db.insert(
                 """
                     INSERT INTO `application_versions`
                     (`application_id`, `version_name`, version_environment)
@@ -110,13 +105,12 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to create application version: " + e.args[1])
 
-        raise Return(version_id)
+        return version_id
 
-    @coroutine
-    def delete_application(self, application_id):
+    async def delete_application(self, application_id):
 
         try:
-            deleted = yield self.db.execute(
+            deleted = await self.db.execute(
                 """
                     DELETE FROM `applications`
                     WHERE `application_id`=%s;
@@ -125,12 +119,11 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to delete application: " + e.args[1])
         else:
-            raise Return(bool(deleted))
+            return bool(deleted)
 
-    @coroutine
-    def delete_application_version(self, version_id):
+    async def delete_application_version(self, version_id):
         try:
-            deleted = yield self.db.execute(
+            deleted = await self.db.execute(
                 """
                     DELETE FROM `application_versions`
                     WHERE `version_id`=%s;
@@ -138,13 +131,12 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to delete application version: " + e.args[1])
         else:
-            raise Return(bool(deleted))
+            return bool(deleted)
 
-    @coroutine
-    def find_application(self, application_name):
+    async def find_application(self, application_name):
 
         try:
-            app = yield self.db.get(
+            app = await self.db.get(
                 """
                     SELECT *
                     FROM `applications`
@@ -156,13 +148,12 @@ class ApplicationsModel(Model):
         if app is None:
             raise ApplicationNotFound(application_name)
 
-        raise Return(ApplicationAdapter(app))
+        return ApplicationAdapter(app)
 
-    @coroutine
-    def find_application_version(self, application_id, version_name):
+    async def find_application_version(self, application_id, version_name):
 
         try:
-            version = yield self.db.get(
+            version = await self.db.get(
                 """
                     SELECT *
                     FROM `application_versions`
@@ -175,12 +166,11 @@ class ApplicationsModel(Model):
         if version is None:
             raise VersionNotFound()
 
-        raise Return(ApplicationVersionAdapter(version))
+        return ApplicationVersionAdapter(version)
 
-    @coroutine
-    def get_application(self, application_id):
+    async def get_application(self, application_id):
         try:
-            application = yield self.db.get(
+            application = await self.db.get(
                 """
                     SELECT *
                     FROM `applications`
@@ -193,13 +183,12 @@ class ApplicationsModel(Model):
         if application is None:
             raise ApplicationNotFound()
 
-        raise Return(ApplicationAdapter(application))
+        return ApplicationAdapter(application)
 
-    @coroutine
-    def get_application_version(self, application_id, version_id):
+    async def get_application_version(self, application_id, version_id):
 
         try:
-            version = yield self.db.get(
+            version = await self.db.get(
                 """
                     SELECT *
                     FROM `application_versions`
@@ -212,13 +201,12 @@ class ApplicationsModel(Model):
         if version is None:
             raise VersionNotFound()
 
-        raise Return(ApplicationVersionAdapter(version))
+        return ApplicationVersionAdapter(version)
 
-    @coroutine
-    def list_application_versions(self, application_id):
+    async def list_application_versions(self, application_id):
 
         try:
-            versions = yield self.db.query(
+            versions = await self.db.query(
                 """
                     SELECT *
                     FROM `application_versions`
@@ -228,13 +216,12 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to list application versions: " + e.args[1])
 
-        raise Return(map(ApplicationVersionAdapter, versions))
+        return map(ApplicationVersionAdapter, versions)
 
-    @coroutine
-    def list_applications(self):
+    async def list_applications(self):
 
         try:
-            apps = yield self.db.query(
+            apps = await self.db.query(
                 """
                     SELECT `application_id`, `application_name`, `application_title`
                     FROM `applications`
@@ -244,12 +231,11 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to list applications: " + e.args[1])
 
-        raise Return(map(ApplicationAdapter, apps))
+        return map(ApplicationAdapter, apps)
 
-    @coroutine
-    def update_application(self, application_id, application_name, application_title):
+    async def update_application(self, application_id, application_name, application_title):
         try:
-            updated = yield self.db.execute(
+            updated = await self.db.execute(
                 """
                     UPDATE `applications`
                     SET `application_name`=%s, `application_title`=%s
@@ -260,12 +246,11 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to update application: " + e.args[1])
 
-        raise Return(bool(updated))
+        return bool(updated)
 
-    @coroutine
-    def update_application_version(self, application_id, version_id, version_name, version_env):
+    async def update_application_version(self, application_id, version_id, version_name, version_env):
         try:
-            updated = yield self.db.execute(
+            updated = await self.db.execute(
                 """
                     UPDATE `application_versions`
                     SET `version_name`=%s, version_environment=%s
@@ -276,7 +261,7 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to update application version: " + e.args[1])
 
-        raise Return(bool(updated))
+        return bool(updated)
 
 
 class VersionExists(Exception):
