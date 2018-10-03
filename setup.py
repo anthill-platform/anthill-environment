@@ -7,6 +7,9 @@ DEPENDENCIES = [
 
 setup(
     name='anthill-environment',
+    package_data={
+      "anthill.environment": ["anthill/environment/sql", "anthill/environment/static"]
+    },
     setup_requires=["pypigit-version"],
     git_version="0.1.0",
     description='An application environment service for Anthill platform',
