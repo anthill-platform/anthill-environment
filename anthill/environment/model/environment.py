@@ -118,7 +118,7 @@ class EnvironmentModel(Model):
         except DatabaseError as e:
             raise EnvironmentDataError("Failed to list environments: " + e.args[1])
 
-        return map(EnvironmentAdapter, environments)
+        return list(map(EnvironmentAdapter, environments))
 
     async def get_scheme(self, exception=False):
         try:

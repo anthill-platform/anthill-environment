@@ -216,7 +216,7 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to list application versions: " + e.args[1])
 
-        return map(ApplicationVersionAdapter, versions)
+        return list(map(ApplicationVersionAdapter, versions))
 
     async def list_applications(self):
 
@@ -231,7 +231,7 @@ class ApplicationsModel(Model):
         except DatabaseError as e:
             raise ApplicationError("Failed to list applications: " + e.args[1])
 
-        return map(ApplicationAdapter, apps)
+        return list(map(ApplicationAdapter, apps))
 
     async def update_application(self, application_id, application_name, application_title):
         try:
